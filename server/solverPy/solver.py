@@ -56,19 +56,25 @@ def recognize_text(pil_image):
     cleaned_text = ''.join(c for c in text if c.isalnum())
     
     return cleaned_text
-
+def post_process_text(text):
+    if not len(text) == 6:
+        #TODO: Retry using a different method
+        return None
+    if not text.isalnum():
+        return None
+    return text
 def solve_captcha(image_path):
     preprocessed = manual_preprocess_image(image_path)
     text = recognize_text(preprocessed)
-    return text
+    return post_process_text(text)
 
 # Test the function with multiple images
 image_paths = [
-    # 'testImages/test1.png',
+    'testImages/test1.png',
     'testImages/test2.png',
-    # 'testImages/test3.png',
-    # 'testImages/test4.png',
-    # 'testImages/test5.png'
+    'testImages/test3.png',
+    'testImages/test4.png',
+    'testImages/test5.png'
 ]
 
 for path in image_paths:
