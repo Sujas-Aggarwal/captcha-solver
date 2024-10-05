@@ -22,12 +22,31 @@ def preprocess_image(image_path):
     
     denoised = cv2.medianBlur(dilated, 3)
     inverted = 255 - denoised
-    return inverted
+    cv2.imwrite("preprocessed.png", inverted)
+    im = Image.open("preprocessed.png")
+    return im
 
-def recognize_text(preprocessed_image):
-    # Convert numpy array to PIL Image
-    pil_image = Image.fromarray(preprocessed_image)
-    
+def manual_preprocess_image(image_path):
+    im = Image.open(image_path).convert("L")
+    im2 = Image.new("L", im.size, 255)
+
+    # Define required grayscale color codes and a threshold for flexibility
+    required_color_codes = [140]  # Adjust based on your captcha
+    threshold = 10  # Allow for a small range of values
+
+    # Loop through the pixels and mark the required color as black
+    for x in range(im.size[1]):
+        for y in range(im.size[0]):
+            pix = im.getpixel((y, x))
+            if any(abs(pix - code) < threshold for code in required_color_codes):
+                im2.putpixel((y, x), 0)
+
+    # Save the processed image for debugging purposes
+    im2.save("output.png")
+    return im
+
+
+def recognize_text(pil_image):
     # Use Tesseract to do OCR on the image
     text = pytesseract.image_to_string(
         pil_image,
@@ -39,17 +58,17 @@ def recognize_text(preprocessed_image):
     return cleaned_text
 
 def solve_captcha(image_path):
-    preprocessed = preprocess_image(image_path)
+    preprocessed = manual_preprocess_image(image_path)
     text = recognize_text(preprocessed)
     return text
 
 # Test the function with multiple images
 image_paths = [
-    'testImages/test1.png',
+    # 'testImages/test1.png',
     'testImages/test2.png',
-    'testImages/test3.png',
-    'testImages/test4.png',
-    'testImages/test5.png'
+    # 'testImages/test3.png',
+    # 'testImages/test4.png',
+    # 'testImages/test5.png'
 ]
 
 for path in image_paths:
