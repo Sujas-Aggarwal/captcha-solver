@@ -9,6 +9,7 @@ export default function Home() {
   const [captchaValue, setCaptchaValue] = useState<string>("");
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [imageNumber, setImageNumber] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   useEffect(() => {
     const fetchImage = async () => {
       try {
@@ -24,6 +25,7 @@ export default function Home() {
     fetchImage();
   }, []);
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    setIsSubmitting(true);
     event.preventDefault();
     if (
       captchaValue === "" ||
@@ -48,6 +50,7 @@ export default function Home() {
         alert("Failed to submit Captcha. Please try again.");
       }
     });
+    setIsSubmitting(false);
   }
 
   return (
@@ -90,7 +93,7 @@ export default function Home() {
           <button
             type="submit"
             className="rounded-md bg-green-500 p-2 disabled:bg-green-300"
-            disabled={captchaValue.length !== 6}
+            disabled={captchaValue.length !== 6 || isSubmitting}
           >
             <Image src={rightArrow} alt="Enter" className="invert" width={20} />
           </button>
