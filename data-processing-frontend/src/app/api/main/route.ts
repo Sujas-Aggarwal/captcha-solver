@@ -10,7 +10,9 @@ const CaptchaSchema = new mongoose.Schema({
   imageNumber: String,
   imageText: String,
 });
+ 
 
+// empty commit for redeploy
 const Captcha =
   mongoose.models.captcha || mongoose.model("captcha", CaptchaSchema);
 
