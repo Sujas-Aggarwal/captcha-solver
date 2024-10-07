@@ -18,31 +18,46 @@ export default function Home() {
         setImageNumber(data.imageNumber); // unique image number
       } catch (error) {
         console.error("Error fetching captcha image:", error);
+        alert("Error fetching captcha image. Please try again later.");
       }
     };
     fetchImage();
   }, []);
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (
       captchaValue === "" ||
       captchaValue === null ||
       captchaValue.length !== 6
     ) {
+      router.refresh();
       alert("Invalid Captcha");
       return;
     }
-    router.replace("/thank-you");
+    await fetch("/api/main", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ imageNumber, imageText: captchaValue }),
+    }).then((res) => {
+      if (res.ok) {
+        router.push("/thank-you");
+      } else {
+        router.refresh();
+        alert("Failed to submit Captcha. Please try again.");
+      }
+    });
   }
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-8 row-start-2 items-center sm:items-start"
+        className="flex flex-col gap-4 row-start-2 items-center sm:items-start"
       >
         <h1 className="text-center flex justify-center items-center self-center ">
-          Login to Continue
+          Are you a Robot?
         </h1>
         {imageSrc ? (
           <Image
@@ -67,10 +82,16 @@ export default function Home() {
               setCaptchaValue(e.target.value);
             }}
             type="text"
+            maxLength={6}
+            minLength={6}
             placeholder="Enter Captcha Here"
             className="p-2 px-4 rounded-md outline-none"
           />
-          <button className="rounded-md bg-green-500 p-2">
+          <button
+            type="submit"
+            className="rounded-md bg-green-500 p-2 disabled:bg-green-300"
+            disabled={captchaValue.length !== 6}
+          >
             <Image src={rightArrow} alt="Enter" className="invert" width={20} />
           </button>
         </div>

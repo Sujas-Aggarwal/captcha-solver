@@ -8,10 +8,11 @@ import { Buffer } from "buffer";
 const CaptchaSchema = new mongoose.Schema({
   imageBase64: String,
   imageNumber: String,
+  imageText: String,
 });
 
 const Captcha =
-  mongoose.models.Captcha || mongoose.model("Captcha", CaptchaSchema);
+  mongoose.models.captcha || mongoose.model("captcha", CaptchaSchema);
 
 const CAPTCHA_IMAGE_URI = process.env.CAPTCHA_IMAGE_URI || "";
 
@@ -42,7 +43,6 @@ export async function GET(req: NextRequest) {
       if (!imgExist) {
         break; // Unique image found, exit the loop
       }
-
       attempts += 1;
     }
 
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     const imageNumber = uuidv4();
 
     // Save base64 image and imageNumber to MongoDB
-    const captcha = new Captcha({ imageBase64, imageNumber });
+    const captcha = new Captcha({ imageBase64, imageNumber, imageText: "" });
     await captcha.save();
 
     // Disconnect from MongoDB after saving the image
@@ -75,6 +75,54 @@ export async function GET(req: NextRequest) {
     console.error("Error fetching image or storing in MongoDB:", error);
     return NextResponse.json(
       { error: "Failed to fetch or save image." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { imageNumber, imageText } = await req.json();
+
+    // Validation: Check if imageNumber and imageText are provided
+    if (!imageNumber || !imageText) {
+      return NextResponse.json(
+        { error: "Invalid imageNumber or imageText." },
+        { status: 400 }
+      );
+    }
+
+    // Connect to MongoDB if not connected
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
+    // Update the document where imageNumber matches
+    const result = await Captcha.updateOne({ imageNumber }, { imageText });
+
+    // Check if the update was successful
+    if (result.modifiedCount === 0) {
+      return NextResponse.json(
+        { error: "Failed to update imageText. Document not found." },
+        { status: 404 }
+      );
+    }
+
+    // Disconnect from MongoDB
+    await disconnectDB();
+
+    // Return a success response
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error updating imageText in MongoDB:", error);
+
+    // Ensure disconnection if any error occurs
+    if (mongoose.connection.readyState === 1) {
+      await disconnectDB();
+    }
+
+    return NextResponse.json(
+      { error: "Failed to update imageText due to server error." },
       { status: 500 }
     );
   }
