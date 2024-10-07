@@ -3,20 +3,28 @@ import mongoose, { connectDB, disconnectDB } from "@/utils/db";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid"; // To generate unique image numbers
 import { Buffer } from "buffer";
-
+//printting ENV Variables
+console.log(
+  "NEXT_PUBLIC_CAPTCHA_IMAGE_URI",
+  process.env.NEXT_PUBLIC_CAPTCHA_IMAGE_URI
+);
+console.log(
+  "NEXT_PUBLIC_MONGO_CONNECT_URI",
+  process.env.NEXT_PUBLIC_MONGO_CONNECT_URI
+);
 // MongoDB schema (example)
 const CaptchaSchema = new mongoose.Schema({
   imageBase64: String,
   imageNumber: String,
   imageText: String,
 });
- 
 
 // empty commit for redeploy
 const Captcha =
   mongoose.models.captcha || mongoose.model("captcha", CaptchaSchema);
 
-const NEXT_PRIVATE_CAPTCHA_IMAGE_URI = process.env.NEXT_PRIVATE_CAPTCHA_IMAGE_URI || "";
+const NEXT_PUBLIC_CAPTCHA_IMAGE_URI =
+  process.env.NEXT_PUBLIC_CAPTCHA_IMAGE_URI || "";
 
 export async function GET() {
   try {
@@ -26,7 +34,7 @@ export async function GET() {
 
     while (attempts < maxAttempts) {
       // Fetch CAPTCHA image
-      const imageResponse = await axios.get(NEXT_PRIVATE_CAPTCHA_IMAGE_URI, {
+      const imageResponse = await axios.get(NEXT_PUBLIC_CAPTCHA_IMAGE_URI, {
         responseType: "arraybuffer",
       });
 
@@ -51,7 +59,10 @@ export async function GET() {
     // If no unique image found after maxAttempts
     if (attempts >= maxAttempts || !imageBase64) {
       return NextResponse.json(
-        { error: "Failed to fetch unique image from NEXT_PRIVATE_CAPTCHA_IMAGE_URI." },
+        {
+          error:
+            "Failed to fetch unique image from NEXT_PUBLIC_CAPTCHA_IMAGE_URI.",
+        },
         { status: 500 }
       );
     }
