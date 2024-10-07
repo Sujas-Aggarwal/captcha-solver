@@ -1,11 +1,11 @@
 import { assert } from "console";
 import mongoose from "mongoose";
-const MONGO_CONNECT_URI =
-  process.env.MONGO_CONNECT_URI || "";
-assert(MONGO_CONNECT_URI, "MONGO_CONNECT_URI is required");
+const NEXT_PRIVATE_MONGO_CONNECT_URI =
+  process.env.NEXT_PRIVATE_MONGO_CONNECT_URI || "";
+assert(NEXT_PRIVATE_MONGO_CONNECT_URI, "NEXT_PRIVATE_MONGO_CONNECT_URI is required");
 export const connectDB = async () => {
   try {
-    await mongoose.connect(MONGO_CONNECT_URI);
+    await mongoose.connect(NEXT_PRIVATE_MONGO_CONNECT_URI);
     console.log("MongoDB connected");
   } catch (error) {
     console.error("MongoDB connection failed", error);
