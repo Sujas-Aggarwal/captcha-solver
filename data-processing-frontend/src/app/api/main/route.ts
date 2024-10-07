@@ -16,10 +16,10 @@ const Captcha =
 
 const CAPTCHA_IMAGE_URI = process.env.CAPTCHA_IMAGE_URI || "";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     let imageBase64 = "";
-    let maxAttempts = 10; // Avoid infinite loop
+    const maxAttempts = 10; // Avoid infinite loop
     let attempts = 0;
 
     while (attempts < maxAttempts) {
