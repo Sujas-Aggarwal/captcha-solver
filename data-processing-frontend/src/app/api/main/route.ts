@@ -1,93 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose, { connectDB, disconnectDB } from "@/utils/db";
-import axios from "axios";
-import { v4 as uuidv4 } from "uuid"; // To generate unique image numbers
-import { Buffer } from "buffer";
-//printting ENV Variables
-console.log(
-  "NEXT_PUBLIC_CAPTCHA_IMAGE_URI",
-  process.env.NEXT_PUBLIC_CAPTCHA_IMAGE_URI
-);
-console.log(
-  "NEXT_PUBLIC_MONGO_CONNECT_URI",
-  process.env.NEXT_PUBLIC_MONGO_CONNECT_URI
-);
+
 // MongoDB schema (example)
-const CaptchaSchema = new mongoose.Schema({
-  imageBase64: String,
-  imageNumber: String,
-  imageText: String,
+const ImageNameSchema = new mongoose.Schema({
+  image: String,  // Base64 image
+  label: String,
+  number: String,
+  text: String,
 });
 
-// empty commit for redeploy
-const Captcha =
-  mongoose.models.captcha || mongoose.model("captcha", CaptchaSchema);
-
-const NEXT_PUBLIC_CAPTCHA_IMAGE_URI =
-  process.env.NEXT_PUBLIC_CAPTCHA_IMAGE_URI || "";
+const ImageName =
+  mongoose.models.image_name || mongoose.model("image_name", ImageNameSchema);
 
 export async function GET() {
   try {
-    let imageBase64 = "";
-    const maxAttempts = 10; // Avoid infinite loop
-    let attempts = 0;
-
-    while (attempts < maxAttempts) {
-      // Fetch CAPTCHA image
-      const imageResponse = await axios.get(NEXT_PUBLIC_CAPTCHA_IMAGE_URI, {
-        responseType: "arraybuffer",
-      });
-
-      // Convert image to base64
-      imageBase64 = Buffer.from(imageResponse.data, "binary").toString(
-        "base64"
-      );
-
-      // Connect to MongoDB if not already connected
-      if (mongoose.connection.readyState !== 1) {
-        await connectDB();
-      }
-
-      // Check if the image already exists in the database
-      const imgExist = await Captcha.findOne({ imageBase64 });
-      if (!imgExist) {
-        break; // Unique image found, exit the loop
-      }
-      attempts += 1;
+    // Connect to MongoDB if not already connected
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
     }
 
-    // If no unique image found after maxAttempts
-    if (attempts >= maxAttempts || !imageBase64) {
+    // Fetch a document where text is an empty string
+    const imageDoc = await ImageName.findOne({ text: "" });
+
+    // Handle the case when no such document is found
+    if (!imageDoc) {
+      await disconnectDB();
       return NextResponse.json(
-        {
-          error:
-            "Failed to fetch unique image from NEXT_PUBLIC_CAPTCHA_IMAGE_URI.",
-        },
-        { status: 500 }
+        { error: "No available image with an empty text field." },
+        { status: 404 }
       );
     }
 
-    // Generate unique image number
-    const imageNumber = uuidv4();
+    const { image, number } = imageDoc;
 
-    // Save base64 image and imageNumber to MongoDB
-    const captcha = new Captcha({ imageBase64, imageNumber, imageText: "" });
-    await captcha.save();
-
-    // Disconnect from MongoDB after saving the image
+    // Disconnect from MongoDB after fetching the image
     await disconnectDB();
 
-    // Set response and cookie
+    // Return the base64 image and number in the response
     const response = NextResponse.json({
-      image: `data:image/png;base64,${imageBase64}`,
-      imageNumber: imageNumber,
+      image: `data:image/png;base64,${image}`,
+      imageNumber: number,
     });
 
     return response;
   } catch (error) {
-    console.error("Error fetching image or storing in MongoDB:", error);
+    console.error("Error fetching image from MongoDB:", error);
     return NextResponse.json(
-      { error: "Failed to fetch or save image." },
+      { error: "Failed to fetch image." },
       { status: 500 }
     );
   }
@@ -110,13 +69,16 @@ export async function POST(req: NextRequest) {
       await connectDB();
     }
 
-    // Update the document where imageNumber matches
-    const result = await Captcha.updateOne({ imageNumber }, { imageText });
+    // Update the document where number matches and text is empty
+    const result = await ImageName.updateOne(
+      { number: imageNumber, text: "" },
+      { text: imageText }
+    );
 
     // Check if the update was successful
     if (result.modifiedCount === 0) {
       return NextResponse.json(
-        { error: "Failed to update imageText. Document not found." },
+        { error: "Failed to update text. Document not found or already updated." },
         { status: 404 }
       );
     }
@@ -127,7 +89,7 @@ export async function POST(req: NextRequest) {
     // Return a success response
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating imageText in MongoDB:", error);
+    console.error("Error updating text in MongoDB:", error);
 
     // Ensure disconnection if any error occurs
     if (mongoose.connection.readyState === 1) {
@@ -135,7 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: "Failed to update imageText due to server error." },
+      { error: "Failed to update text due to server error." },
       { status: 500 }
     );
   }
